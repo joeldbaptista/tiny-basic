@@ -1,5 +1,5 @@
 10 n = 2
-20 if n >= 50 then 130
+20 if n >= 200 then 130
 30 d = 2
 40 if d * d > n then 100
 50 r = n - n / d * d

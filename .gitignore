@@ -1,2 +1,6 @@
 *.o
 bcom
+basm
+bvm
+examples/*.asm
+examples/*.bc
