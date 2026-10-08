@@ -76,3 +76,81 @@ I changed the name of some instructions but they are essentially the same.
 The assembly compiles to byte code file where the variables are all static. 
 This means, `store x` pops the value from the stack, and saves it in the 
 static slot labeled as `x`. 
+
+## Binary layout
+
+The assembler, `basm`, writes a byte code file with the extension `.bc`. The
+file has two parts: a 12-byte header, and a code section with 5 bytes per
+instruction. All multi-byte integers are little-endian, which means the least
+significant byte comes first. The file stores no variable names and no labels.
+
+The header has these fields:
+
+| Offset | Size | Field                                   |
+|--------|------|-----------------------------------------|
+| 0      | 4    | magic `TBVM` (`54 42 56 4d`)            |
+| 4      | 4    | number of variable slots, unsigned      |
+| 8      | 4    | number of instructions, unsigned        |
+
+Each instruction has these fields:
+
+| Offset | Size | Field                                   |
+|--------|------|-----------------------------------------|
+| 0      | 1    | opcode                                  |
+| 1      | 4    | operand, signed two's complement        |
+
+The opcodes are the values of the `enum` in `vm.h`:
+
+| Opcode | Instruction | Opcode | Instruction |
+|--------|-------------|--------|-------------|
+| `00`   | `getnm`     | `09`   | `tstne`     |
+| `01`   | `fetch`     | `0a`   | `tstgt`     |
+| `02`   | `store`     | `0b`   | `tstlt`     |
+| `03`   | `add`       | `0c`   | `tstge`     |
+| `04`   | `sub`       | `0d`   | `tstle`     |
+| `05`   | `mul`       | `0e`   | `jump`      |
+| `06`   | `div`       | `0f`   | `goto`      |
+| `07`   | `neg`       | `10`   | `print`     |
+| `08`   | `tsteq`     | `11`   | `stop`      |
+
+The meaning of the operand depends on the opcode:
+
+- `getnm`: the number to push.
+- `fetch` and `store`: the index of the variable slot.
+- `jump` and `goto`: the index of the target instruction. The assembler
+  replaces each label number with this index, so `label` produces no bytes.
+  The index equal to the number of instructions halts the program.
+- every other opcode: unused, and always 0.
+
+### Displaying the bytes
+
+`xxd` displays the two parts of a `.bc` file. The first command prints the
+header, and the second prints one instruction per line:
+
+```
+xxd -l 12 examples/countdown.bc
+xxd -s 12 -c 5 examples/countdown.bc
+```
+
+`-l 12` stops after the 12 header bytes. `-s 12` skips the header, and `-c 5`
+prints 5 bytes per line. The option `-c` needs its value: without it, `xxd`
+takes the file name as the column count and reads standard input.
+
+For `examples/countdown.bc` the header is:
+
+```
+00000000: 5442 564d 0100 0000 0d00 0000            TBVM........
+```
+
+So the program has 1 variable slot (`n`) and 13 instructions. These are the
+first 4 instructions:
+
+```
+0000000c: 000a 0000 00  .....    getnm 10
+00000011: 0200 0000 00  .....    store n (slot 0)
+00000016: 0100 0000 00  .....    fetch n (slot 0)
+0000001b: 1000 0000 00  .....    print
+```
+
+`xxd` groups the bytes in pairs, so `000a 0000 00` means the bytes
+`00 0a 00 00 00`: opcode `00` (`getnm`) and operand `0a 00 00 00` (10).
