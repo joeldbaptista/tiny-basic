@@ -93,10 +93,9 @@ expr3(void)
 static void
 getvar(void)
 {
-	if (!islower((unsigned char)*bufptr))
-		die("syntax error");
-	printf("fetch ");
-	while (islower((unsigned char)*bufptr))
-		putchar(*bufptr++);
-	putchar('\n');
+	char *p;
+	int n;
+
+	n = name(&p);
+	printf("fetch %.*s\n", n, p);
 }

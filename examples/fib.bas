@@ -1,10 +1,13 @@
-10 a = 0
-20 b = 1
-30 n = 10
-40 print a
-50 t = a + b
-60 a = b
-70 b = t
-80 n = n - 1
-90 if n != 0 then 40
-100 stop
+# print the first 10 Fibonacci numbers
+
+	a = 0
+	b = 1
+	n = 10
+loop:
+	print a
+	t = a + b
+	a = b
+	b = t
+	n = n - 1
+	if n != 0 then goto loop
+	stop

@@ -36,15 +36,15 @@ struct insn {
 
 typedef struct label Label;
 struct label {
-	long num;
-	int addr;
+	char name[MAXNAME];
+	int addr;   /* -1 until the label is defined */
 };
 
 static void die(const char *fmt, ...);
 static const InsnDef *lookup(const char *name);
 static long parsenum(const char *s);
 static int varslot(const char *name);
-static int labeladdr(long num);
+static int labelslot(const char *name);
 static void addlabel(const char *arg);
 static void addinsn(const InsnDef *d, const char *arg);
 static void assemble(void);
@@ -144,35 +144,37 @@ varslot(const char *name)
 	return nvars++;
 }
 
-/* labeladdr: return the address of label num, or -1 if undefined. */
+/* labelslot: return the slot of label name, allocating it if new. */
 static int
-labeladdr(long num)
+labelslot(const char *name)
 {
 	int i;
 
 	for (i = 0; i < nlabels; i++) {
-		if (labels[i].num == num)
-			return labels[i].addr;
+		if (strcmp(labels[i].name, name) == 0)
+			return i;
 	}
+	if (nlabels == MAXLABELS)
+		die("too many labels");
+	if (strlen(name) >= MAXNAME)
+		die("label name too long '%s'", name);
+	strcpy(labels[nlabels].name, name);
+	labels[nlabels].addr = -1;
 
-	return -1;
+	return nlabels++;
 }
 
 static void
 addlabel(const char *arg)
 {
-	long n;
+	int i;
 
 	if (!arg)
 		die("label: missing operand");
-	n = parsenum(arg);
-	if (labeladdr(n) >= 0)
-		die("duplicate label %ld", n);
-	if (nlabels == MAXLABELS)
-		die("too many labels");
-	labels[nlabels].num = n;
-	labels[nlabels].addr = ncode;
-	nlabels++;
+	i = labelslot(arg);
+	if (labels[i].addr >= 0)
+		die("duplicate label '%s'", arg);
+	labels[i].addr = ncode;
 }
 
 static void
@@ -197,9 +199,11 @@ addinsn(const InsnDef *d, const char *arg)
 	case ARG_VAR:
 		in->arg = varslot(arg);
 		break;
-	case ARG_NUM:   /* FALLTHROUGH */
-	case ARG_LABEL:
+	case ARG_NUM:
 		in->arg = parsenum(arg);
+		break;
+	case ARG_LABEL:
+		in->arg = labelslot(arg);
 		break;
 	}
 }
@@ -232,19 +236,21 @@ assemble(void)
 		die("read error");
 }
 
-/* resolve: replace label numbers with instruction addresses. */
+/* resolve: replace label slots with instruction addresses. */
 static void
 resolve(void)
 {
-	int i, a;
+	Label *l;
+	int i;
 
 	for (i = 0; i < ncode; i++) {
 		if (code[i].op != OP_JUMP && code[i].op != OP_GOTO)
 			continue;
 		lineno = code[i].line;
-		if ((a = labeladdr(code[i].arg)) < 0)
-			die("undefined label %ld", code[i].arg);
-		code[i].arg = a;
+		l = &labels[code[i].arg];
+		if (l->addr < 0)
+			die("undefined label '%s'", l->name);
+		code[i].arg = l->addr;
 	}
 	lineno = 0;
 }

@@ -1,8 +1,12 @@
-10 i = 1
-20 sum = 0
-30 if i > 100 then 70
-40 sum = sum + i
-50 i = i + 1
-60 goto 30
-70 print sum
-80 stop
+# sum the integers from 1 to 100
+
+	i = 1
+	sum = 0
+loop:
+	if i > 100 then goto done
+	sum = sum + i
+	i = i + 1
+	goto loop
+done:
+	print sum
+	stop

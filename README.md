@@ -14,10 +14,11 @@ The next is the grammar for Tiny Basic:
 ```
 digit = [0-9]
 letter = [a-z]
+any = any character except a newline
 
 number = digit+
 variable = letter+
-linenumber = number
+label = letter+
 
 addop = + | -
 mulop = * | /
@@ -28,18 +29,41 @@ exp1 = exp2 (addop exp2)*
 exp2 = exp3 (mulop exp3)*
 exp3 = "-"? ("(" expr ")" | number | variable)
 
-letphrase = ("let")? variable "=" expr
+labelphrase = label ":"
+letphrase = variable "=" expr
 ifphrase = "if" expr "then" gotophrase
-gotophrase = "goto" linenumber
+gotophrase = "goto" label
 stopphrase = "stop"
 printphrase = "print" expr
 statement = letphrase | ifphrase | gotophrase | stopphrase | printphrase
-line = linenumber statement
+comment = "#" any*
+line = (statement | labelphrase | comment)?
 program = (line)+
 ```
 
 In `relop` I decided to use different symbols for equality and not-equality from
 what the book suggested.
+
+The keywords `if`, `then`, `goto`, `stop` and `print` are reserved, so they
+cannot be variable or label names. But a name can start with a keyword, so
+`printer` is a valid variable. Variables and labels have separate name spaces:
+a variable and a label can have the same name, and they mean different things.
+Spaces and tabs can separate any two tokens. The compiler ignores empty lines,
+lines with only spaces and tabs, and comments. A comment is a line whose first
+character other than a space or a tab is `#`.
+
+A label marks the next statement, so a program looks like this:
+
+```
+# count down from 10 to 1
+	n = 10
+
+loop:
+	print n
+	n = n - 1
+	if n > 0 then goto loop
+	stop
+```
 
 ## Virtual machine
 
@@ -64,9 +88,9 @@ tstlt - pop the 1st, pop the 2nd, and tests if 2nd < 1st
 tstge - pop the 1st, pop the 2nd, and tests if 2nd >= 1st
 tstle - pop the 1st, pop the 2nd, and tests if 2nd <= 1st
 
-label <number> - marks current line as `number`
-jump <number> - jumps to line labeled `number` if condition true
-goto <number> - jumps to line labeled `number`
+label <name> - marks the next instruction as `name`
+jump <name> - pops, and jumps to label `name` if the value is not 0
+goto <name> - jumps to label `name`
 
 print - pop and print the value
 stop - stop execution
@@ -118,7 +142,7 @@ The meaning of the operand depends on the opcode:
 - `getnm`: the number to push.
 - `fetch` and `store`: the index of the variable slot.
 - `jump` and `goto`: the index of the target instruction. The assembler
-  replaces each label number with this index, so `label` produces no bytes.
+  replaces each label name with this index, so `label` produces no bytes.
   The index equal to the number of instructions halts the program.
 - every other opcode: unused, and always 0.
 

@@ -5,46 +5,65 @@
 #include "basic.h"
 
 static int readline(void);
+static void doline(void);
 
 char *bufptr;
+int lineno;
 static char inbuf[MAXLINE];
 
+/* readline: read the next line into inbuf; return 0 at end of input. */
 static int
 readline(void)
 {
 	int c, i;
 
 	bufptr = inbuf;
-	for (i = 0; (c = getchar()) != '\n' && c != EOF; i++) {
+	i = 0;
+	while ((c = getchar()) != EOF && c != '\n') {
 		if (i == MAXLINE - 1)
 			die("line too long");
-		inbuf[i] = c;
+		inbuf[i++] = c;
 	}
 	inbuf[i] = '\0';
+	lineno++;
 
-	return i > 0;
+	return c != EOF || i > 0;
+}
+
+/* doline: line = (statement | labelphrase | comment)? */
+static void
+doline(void)
+{
+	char *p;
+	int n;
+
+	skipspace();
+	if (*bufptr == '\0' || *bufptr == '#')
+		return;
+	if (keyword("print")) {
+		doprint();
+	} else if (keyword("if")) {
+		doif();
+	} else if (keyword("stop")) {
+		dostop();
+	} else if (keyword("goto")) {
+		dogoto();
+	} else {
+		n = name(&p);
+		if (match(":"))
+			dolabel(p, n);
+		else
+			dolet(p, n);
+	}
+	if (*bufptr != '\0')
+		die("unexpected '%s'", bufptr);
 }
 
 int
 main(void)
 {
-	while (readline()) {
-		emitnum("label");
-		if (match("let"))
-			dolet();
-		else if (match("print"))
-			doprint();
-		else if (match("if"))
-			doif();
-		else if (match("stop"))
-			dostop();
-		else if (match("goto"))
-			dogoto();
-		else
-			dolet();
-		if (*bufptr != '\0')
-			die("syntax error");
-	}
+	while (readline())
+		doline();
 
 	return 0;
 }

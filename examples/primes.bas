@@ -1,12 +1,20 @@
-10 n = 2
-20 if n >= 200 then 130
-30 d = 2
-40 if d * d > n then 100
-50 r = n - n / d * d
-60 if r == 0 then 110
-70 d = d + 1
-80 goto 40
-100 print n
-110 n = n + 1
-120 goto 20
-130 stop
+# print the primes below 200 by trial division
+
+	n = 2
+next:
+	if n >= 200 then goto done
+	d = 2
+trial:
+	if d * d > n then goto prime
+	# r is the remainder of n / d
+	r = n - n / d * d
+	if r == 0 then goto skip
+	d = d + 1
+	goto trial
+prime:
+	print n
+skip:
+	n = n + 1
+	goto next
+done:
+	stop

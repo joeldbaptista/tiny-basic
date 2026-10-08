@@ -1,10 +1,15 @@
-10 a = 1071
-20 b = 462
-30 if a == b then 90
-40 if a > b then 70
-50 b = b - a
-60 goto 30
-70 a = a - b
-80 goto 30
-90 print a
-100 stop
+# gcd(1071, 462) by repeated subtraction
+
+	a = 1071
+	b = 462
+loop:
+	if a == b then goto done
+	if a > b then goto suba
+	b = b - a
+	goto loop
+suba:
+	a = a - b
+	goto loop
+done:
+	print a
+	stop
