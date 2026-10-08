@@ -1,56 +1,50 @@
-/*
-::::::::::::::::::::
-main.c
-::::::::::::::::::::
-*/
+/* main.c: reads Tiny Basic lines and dispatches each statement. */
 
 #include <stdio.h>
 
-#define MAXLINE 256
+#include "basic.h"
 
-char *bufptr, inbuf[MAXLINE];
+static int readline(void);
 
-main()
+char *bufptr;
+static char inbuf[MAXLINE];
+
+static int
+readline(void)
 {
-	while (getline())
-	{
-		linenum();
-		if (check("let"))
+	int c, i;
+
+	bufptr = inbuf;
+	for (i = 0; (c = getchar()) != '\n' && c != EOF; i++) {
+		if (i == MAXLINE - 1)
+			die("line too long");
+		inbuf[i] = c;
+	}
+	inbuf[i] = '\0';
+
+	return i > 0;
+}
+
+int
+main(void)
+{
+	while (readline()) {
+		emitnum("label");
+		if (match("let"))
 			dolet();
-		else if (check("print"))
+		else if (match("print"))
 			doprint();
-		else if (check("if"))
+		else if (match("if"))
 			doif();
-		else if (check("stop"))
+		else if (match("stop"))
 			dostop();
-		else if (check("goto"))
+		else if (match("goto"))
 			dogoto();
 		else
 			dolet();
+		if (*bufptr != '\0')
+			die("syntax error");
 	}
-	printf("\n");
-}
 
-getline()
-{
-	int c,i;
-
-	bufptr = inbuf;
-
-	for (i = 0; (c = getchar()) != '\n' && c != EOF; i++)
-		inbuf[i] = c;
-
-	inbuf[i] = '\0';
-
-	return((i == 0) ? 0 : 1);
-}
-
-linenum()
-{
-	printf("label ");
-
-	while (*bufptr >= '0' && *bufptr <= '9')
-		printf("%c",*bufptr++);
-
-	printf("\n");
+	return 0;
 }

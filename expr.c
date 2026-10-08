@@ -1,108 +1,102 @@
-/*
-::::::::::::::::::::
-expr.c
-::::::::::::::::::::
-*/
+/* expr.c: code generation for Tiny Basic expressions. */
 
+#include <ctype.h>
 #include <stdio.h>
 
-#define MAXLINE 256
+#include "basic.h"
 
-extern char *bufptr, inbuf[MAXLINE];
+static void expr1(void);
+static void expr2(void);
+static void expr3(void);
+static void getvar(void);
 
-expr()
+/* expr: exp1 (relop exp1)? */
+void
+expr(void)
 {
-	exp1();
+	const char *op;
 
-	for (;;)
-		if (check("=")) {
-			exp1(); printf("tsteq\n"); }
-		else if (check("<>")) {
-			exp1(); printf("tstne\n"); }
-		else if (check("<=")) {
-			exp1(); printf("tstle\n"); }
-		else if (check(">=")) {
-			exp1(); printf("tstge\n"); }
-		else if (check("<")) {
-			exp1(); printf("tstlt\n"); }
-		else if (check(">")) {
-			exp1(); printf("tstgt\n"); }
-		else
-			return;
-}
-
-exp1()
-{
-	exp2();
-
-	for (;;)
-		if (check("+")) {
-			exp2(); printf("addn\n"); }
-		else if (check("-")) {
-			exp2(); printf("subn\n"); }
-		else
-			return;
-}
-
-exp2()
-{
-	exp3();
-
-	for (;;)
-		if (check("*")) {
-			exp3(); printf("mult\n"); }
-		else if (check("/")) {
-			exp3(); printf("divn\n"); }
-		else
-			return;
-}
-
-/*
-::::::::::::::::::::::
-expr.c - cont...
-::::::::::::::::::::::
-*/
-
-exp3()
-{
-	int s;
-
-	s = (check("-")) ? -1 : 1;
-	if (check("("))
-	{
-		expr();
-		scan(")");
-	}
+	expr1();
+	if (match("=="))
+		op = "tsteq";
+	else if (match("!="))
+		op = "tstne";
+	else if (match("<="))
+		op = "tstle";
+	else if (match(">="))
+		op = "tstge";
+	else if (match("<"))
+		op = "tstlt";
+	else if (match(">"))
+		op = "tstgt";
 	else
-		if (*bufptr >= '0' && *bufptr <= '9')
-			getnum();
-		else
-			getvar();
-	if (s == -1)
-		printf("minus\n");
+		return;
+	expr1();
+	printf("%s\n", op);
 }
 
-getnum()
+/* expr1: exp2 (addop exp2)* */
+static void
+expr1(void)
 {
-	printf("getnm ");
-
-	while (*bufptr >= '0' && *bufptr <= '9')
-		printf("%c",*bufptr++);
-
-	printf("\n");
-}
-
-getvar()
-{
-	if (*bufptr < 'a' || *bufptr > 'z') {
-		printf("Syntax error\n");
-		exit(1);
+	expr2();
+	for (;;) {
+		if (match("+")) {
+			expr2();
+			printf("add\n");
+		} else if (match("-")) {
+			expr2();
+			printf("sub\n");
+		} else {
+			return;
+		}
 	}
+}
 
+/* expr2: exp3 (mulop exp3)* */
+static void
+expr2(void)
+{
+	expr3();
+	for (;;) {
+		if (match("*")) {
+			expr3();
+			printf("mul\n");
+		} else if (match("/")) {
+			expr3();
+			printf("div\n");
+		} else {
+			return;
+		}
+	}
+}
+
+/* expr3: "-"? ("(" expr ")" | number | variable) */
+static void
+expr3(void)
+{
+	int neg;
+
+	neg = match("-");
+	if (match("(")) {
+		expr();
+		expect(")");
+	} else if (isdigit((unsigned char)*bufptr)) {
+		emitnum("getnm");
+	} else {
+		getvar();
+	}
+	if (neg)
+		printf("neg\n");
+}
+
+static void
+getvar(void)
+{
+	if (!islower((unsigned char)*bufptr))
+		die("syntax error");
 	printf("fetch ");
-
-	while (*bufptr >= 'a' && *bufptr <= 'z')
-		printf("%c",*bufptr++);
-
-	printf("\n");
+	while (islower((unsigned char)*bufptr))
+		putchar(*bufptr++);
+	putchar('\n');
 }

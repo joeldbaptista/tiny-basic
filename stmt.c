@@ -1,55 +1,50 @@
-/*
-::::::::::::::::::::
-stmt.c
-::::::::::::::::::::
-*/
+/* stmt.c: code generation for Tiny Basic statements. */
 
+#include <ctype.h>
 #include <stdio.h>
 
-#define MAXLINE 256
+#include "basic.h"
 
-extern char *bufptr, inbuf[MAXLINE];
+void
+dolet(void)
+{
+	char *p;
+	int n;
 
-doprint()
+	p = bufptr;
+	while (islower((unsigned char)*bufptr))
+		bufptr++;
+	n = (int)(bufptr - p);
+	if (n == 0)
+		die("syntax error");
+	expect("=");
+	expr();
+	printf("store %.*s\n", n, p);
+}
+
+void
+doprint(void)
 {
 	expr();
 	printf("print\n");
 }
 
-dolet()
-{
-	char *varptr;
-
-	varptr = bufptr;
-	while (*bufptr++ != '=');
-	*(bufptr-1) = '\0';
-	expr();
-	printf("store %s\n",varptr);
-}
-
-doif()
+void
+doif(void)
 {
 	expr();
-	scan("then");
-	printf("jump ");
-
-	while (*bufptr >= '0' && *bufptr <= '9')
-		printf("%c",*bufptr++);
-
-	printf("\n");
+	expect("then");
+	emitnum("jump");
 }
 
-dostop()
+void
+dostop(void)
 {
 	printf("stop\n");
 }
 
-dogoto()
+void
+dogoto(void)
 {
-	printf("goto ");
-
-	while (*bufptr >= '0' && *bufptr <= '9')
-		printf("%c",*bufptr++);
-
-	printf("\n");
+	emitnum("goto");
 }

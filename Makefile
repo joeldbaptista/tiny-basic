@@ -1,16 +1,30 @@
-FLAGS=-Wimplicit-int
+# bcom: compiles Tiny Basic to stack machine assembly.
 
-bcom:	main.o stmt.o expr.o util.o
-	cc $(FLAGS) main.o stmt.o expr.o util.o -o bcom
+CC = cc
+CFLAGS = -std=c99 -pedantic -Wall -Wextra -g
+LDFLAGS =
 
-main.o:	main.c
-	cc -c main.c
+BIN = bcom
+SRC = main.c stmt.c expr.c util.c
+OBJ = $(SRC:.c=.o)
 
-stmt.o:	stmt.c
-	cc -c stmt.c
+all: $(BIN)
 
-expr.o:	expr.c
-	cc -c expr.c
+$(BIN): $(OBJ)
+	$(CC) $(LDFLAGS) -o $@ $(OBJ)
 
-util.o:	util.c
-	cc -c util.c
+$(OBJ): basic.h
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+test: $(BIN)
+	for f in examples/*.bas; do \
+		echo "== $$f"; \
+		./$(BIN) < $$f || exit 1; \
+	done
+
+clean:
+	rm -f $(BIN) $(OBJ)
+
+.PHONY: all test clean
